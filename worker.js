@@ -1,11 +1,14 @@
 export default {
   async fetch(request) {
-    const url = new URL(request.url)
-    const path = url.pathname
+    const path = new URL(request.url).pathname
 
-    // ========= 使用说明页 =========
+    // 正确获取访问域名
+    const host = request.headers.get("host")
+    const scheme = request.headers.get("x-forwarded-proto") || "https"
+    const origin = `${scheme}://${host}`
+
     if (path === "/") {
-      return new Response(renderUsage(url.origin), {
+      return new Response(renderUsage(origin), {
         headers: { "content-type": "text/html; charset=utf-8" }
       })
     }
@@ -29,9 +32,8 @@ export default {
     const upstreamUrl =
       upstreamBase +
       path.replace(/^\/(openai|anthropic|groq|deepseek|gemini)/, "") +
-      url.search
+      new URL(request.url).search
 
-    // ========= 纯透明转发 =========
     return fetch(new Request(upstreamUrl, {
       method: request.method,
       headers: request.headers,
@@ -43,6 +45,7 @@ export default {
     }))
   }
 }
+
 
 // ========= 前端说明页（域名自适应） =========
 function renderUsage(origin) {
